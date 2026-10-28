@@ -1,5 +1,5 @@
-IMAGE_NAME=yocto_ubuntu22_image:latest
-CONTAINER_NAME=yocto_ubuntu22
+IMAGE_NAME=yocto_ubuntu26_image:latest
+CONTAINER_NAME=yocto_ubuntu26
 
 docker container ls | grep $CONTAINER_NAME
 if [ $? -eq 0 ]; then

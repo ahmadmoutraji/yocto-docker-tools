@@ -1,0 +1,52 @@
+FROM ubuntu:26.04
+
+# Update system and add the packages required for Yocto builds.
+# Use DEBIAN_FRONTEND=noninteractive, to avoid image build hang waiting
+# for a default confirmation [Y/n] at some configurations.
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# packages needed to build an image on a headless system with a supported Ubuntu or Debian Linux distribution
+RUN apt-get update && apt-get install -y build-essential chrpath cpio debianutils \ 
+diffstat file gawk gcc git iputils-ping libacl1 libcrypt-dev locales \
+python3 python3-git python3-jinja2 python3-pexpect python3-pip python3-subunit \
+socat texinfo unzip wget xz-utils zstd sudo python3-websockets
+
+# Install Tools
+RUN apt install -y vim nano tree silversearcher-ag atop strace bmap-tools
+
+# bitbake-setup installieren
+#RUN pip3 install --break-system-packages bitbake-setup
+
+# Set up locales
+RUN locale-gen en_US.UTF-8
+RUN locale-gen en_US.UTF-8 && update-locale LANG=en_US.UTF-8
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8
+
+# Yocto needs 'source' command for setting up the build environment, so replace
+# the 'sh' alias to 'bash' instead of 'dash'.
+RUN rm /bin/sh && ln -s bash /bin/sh
+
+# Install repo
+ADD https://storage.googleapis.com/git-repo-downloads/repo /usr/local/bin/
+RUN chmod 755 /usr/local/bin/repo
+
+# Build-User mit Host-UID/GID anlegen
+ARG USER
+ARG host_uid
+ARG host_gid
+
+# Default-User 'ubuntu' (UID/GID 1000) entfernen, damit es keine Kollision gibt
+RUN userdel -r ubuntu 2>/dev/null || true; \
+    groupdel ubuntu 2>/dev/null || true; \
+    groupadd -g ${host_gid} nxp && \
+    useradd -g ${host_gid} -m -s /bin/bash -u ${host_uid} ${USER} && \
+    echo "${USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USER} && \
+    chmod 0440 /etc/sudoers.d/${USER}
+
+USER ${USER}
+RUN echo "umask 0022" >> /home/${USER}/.bashrc
+
+ARG DOCKER_WORKDIR
+WORKDIR ${DOCKER_WORKDIR}
